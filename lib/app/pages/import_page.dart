@@ -21,6 +21,8 @@ class ImportPage extends StatefulWidget {
 
 class _ImportPageState extends State<ImportPage> {
   bool _replaceExisting = false;
+  bool _applySettingsOnImport = true;
+  bool _includeSettingsInJsonExport = true;
 
   bool get _mobileWebImportSupported =>
       !kIsWeb &&
@@ -107,6 +109,36 @@ class _ImportPageState extends State<ImportPage> {
             enabled: state.settings.frostedCards,
             child: Padding(
               padding: const EdgeInsets.all(16),
+              child: Column(
+                children: <Widget>[
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('导入时应用作息设置'),
+                    subtitle: const Text('JSON 包含作息与提醒参数时，同步到当前设备。'),
+                    value: _applySettingsOnImport,
+                    onChanged: (bool value) {
+                      setState(() => _applySettingsOnImport = value);
+                    },
+                  ),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('JSON 导出包含作息设置'),
+                    subtitle: const Text('CSV 仍仅导出课程与成绩，不包含作息设置。'),
+                    value: _includeSettingsInJsonExport,
+                    onChanged: (bool value) {
+                      setState(() => _includeSettingsInJsonExport = value);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          FrostedPanel(
+            enabled: state.settings.frostedCards,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
               child: _ActionGrid(actions: actions),
             ),
           ),
@@ -131,7 +163,11 @@ class _ImportPageState extends State<ImportPage> {
     try {
       await widget.appState.runWithBusy(() async {
         final ({int courses, int grades}) result = await widget.appState
-            .importByFile(path: path, replaceExisting: _replaceExisting);
+            .importByFile(
+              path: path,
+              replaceExisting: _replaceExisting,
+              applySettings: _applySettingsOnImport,
+            );
         _showMessage('当前学期导入完成：${result.courses} 门课程，${result.grades} 条成绩。');
       });
     } catch (error) {
@@ -159,6 +195,7 @@ class _ImportPageState extends State<ImportPage> {
             .importAllSemestersByFile(
               path: path,
               replaceExisting: _replaceExisting,
+              applySettings: _applySettingsOnImport,
             );
         _showMessage(
           '全学期导入完成：${result.semesters} 个学期，'
@@ -174,7 +211,9 @@ class _ImportPageState extends State<ImportPage> {
     try {
       await widget.appState.runWithBusy(() async {
         final File file = json
-            ? await widget.appState.exportJson()
+            ? await widget.appState.exportJson(
+                includeSettings: _includeSettingsInJsonExport,
+              )
             : await widget.appState.exportCsv();
         await _shareOrShowPath(file, fallbackPrefix: '导出成功');
       });
@@ -186,7 +225,9 @@ class _ImportPageState extends State<ImportPage> {
   Future<void> _exportAllSemestersJson() async {
     try {
       await widget.appState.runWithBusy(() async {
-        final File file = await widget.appState.exportAllSemestersJson();
+        final File file = await widget.appState.exportAllSemestersJson(
+          includeSettings: _includeSettingsInJsonExport,
+        );
         await _shareOrShowPath(file, fallbackPrefix: '全学期导出成功');
       });
     } catch (error) {

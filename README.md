@@ -1,44 +1,53 @@
 # NWPU Course Monitor
 
-基于 Flutter 的课表与成绩管理应用，目标平台为 Android / iOS / Web / Windows。
+基于 Flutter 的多端课表与成绩管理应用，支持一次开发，多端运行（Android / iOS / Windows / Web）。
 
-## 功能概览
+## 功能与特性
 
-- 课程管理：新增、编辑、删除课程，支持今日/本周视图。
-- 导入导出：支持 `JSON / CSV` 导入导出，支持覆盖或合并去重。
-- 教务导入（NWPU 适配）：支持 URL + Cookie + Header 抓取课表/成绩。
-- 绩点统计：支持手动录入成绩，自动计算学分绩、加权均分、已修学分。
-- 提醒与组件：Android 课程提醒 + 桌面小组件同步。
-- 主题样式：浅色/深色模式，课程卡片磨砂效果可切换。
+- 课表管理
+  - 日列表、周列表、周视图三种模式
+  - 课程详情折叠展示，支持手动增删改
+- 教务导入
+  - 支持移动端内置浏览器进入教务系统后一键提取课程
+  - 兼容 NWPU 场景的课程解析逻辑
+- 成绩与 GPA
+  - 课程可绑定成绩/绩点
+  - 自动计算当前学期 GPA、加权均分、已修学分
+- 导入导出
+  - 当前学期：`JSON / CSV`
+  - 全部学期：`JSON`
+  - `JSON` 可包含作息与提醒设置，便于跨设备迁移
+- 提醒能力
+  - 基于每节课时间进行上课前通知
+  - 提醒提前时间可配置
+- 桌面小组件（Android）
+  - 4x2 组件展示今日课程
+  - 按时间状态区分：未上课 / 上课中 / 已下课
+  - 今日课程结束或无课时，自动切换为“今日无课 + 明日课程”
+- 主题与界面
+  - 浅色 / 深色模式
+  - 轻量磨砂风格与移动端/桌面端适配
+- 学期管理
+  - 新建、切换、编辑学期
+  - 按学期独立管理课表与成绩
 
-## 项目结构
+## 平台支持
 
-```text
-NWPU_COURSE_MONITOR/
-├── android/ ios/ web/ windows/   # Flutter 多端工程
-├── lib/
-│   ├── app/                       # 页面与 UI 组件
-│   ├── models/                    # 数据模型
-│   ├── services/                  # 存储、导入、通知、组件同步
-│   └── state/                     # 应用状态管理
-├── test/                          # 测试
-├── docs/
-│   ├── build/                     # 构建相关说明
-│   ├── references/soaring-schedule/ # 参考仓库快照文件
-│   └── UPSTREAM_ATTRIBUTION.md    # 第三方来源声明
-├── CONTRIBUTING.md
-└── README.md
-```
+- Android：完整功能（含课程提醒、小组件）
+- iOS：核心功能可用（提醒可用；小组件需额外 WidgetKit 扩展配置）
+- Windows：核心功能可用
+- Web：核心页面可运行（系统级提醒/小组件能力受平台限制）
 
-## 本地开发
+## 快速开始
+release 版本已上传至 GitHub Releases
+如果你想要对项目进行本地编译，则需要满足以下环境要求，并按照步骤进行安装、检查和运行。
+### 环境要求
 
-环境：
+- Flutter 3.41.x
+- Dart 3.11.x
+- JDK 17
 
-- Flutter `3.41.2`
-- Dart `3.11.0`
-- JDK `17`
-
-安装依赖与静态检查：
+### 安装与检查
 
 ```bash
 flutter pub get
@@ -46,40 +55,40 @@ flutter analyze
 flutter test
 ```
 
-Android 运行与构建：
+### 运行
 
 ```bash
 flutter run -d android
-flutter build apk --debug
+flutter run -d windows
 ```
 
-## 测试范围声明（截至 2026-03-02）
+### 构建 APK
 
-- 已完成：Android 端核心功能测试。
-- 未完成：Windows 端与 iOS 端系统性测试。
-- 当前结论：除 Android 外，其它平台暂不承诺完全一致的稳定性。
+```bash
+flutter build apk --release
+```
 
-## 参考仓库与来源声明（重要）
+网络环境受限时可使用：
 
-本项目在“教务解析/导入流程”上参考了以下仓库：
+```bash
+cmd /c "set FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn&& flutter build apk --release"
+```
 
-- Upstream: `Whippap/soaring-schedule`
-- URL: `https://github.com/Whippap/soaring-schedule`
-- Upstream license: `MIT`
+## 项目结构
 
-为保证来源透明，本仓库保留了参考快照文件：
-
-- `docs/references/soaring-schedule/jwxtParser.ts`
-- `docs/references/soaring-schedule/CourseImportWizard.tsx`
-- `docs/references/soaring-schedule/JwxtWebView.tsx`
-- `docs/references/soaring-schedule/README.md`
-
-改造关系和合规说明见：`docs/UPSTREAM_ATTRIBUTION.md`。
+```text
+NWPU_COURSE_MONITOR/
+├── android/ ios/ web/ windows/
+├── lib/
+│   ├── app/        # 页面与 UI
+│   ├── models/     # 数据模型
+│   ├── services/   # 导入、存储、提醒、组件同步
+│   └── state/      # 应用状态管理
+├── test/
+└── docs/
+```
 
 ## 许可证
 
-本项目采用 `MIT License`（见仓库根目录 `LICENSE`）。
+MIT License
 
-## AI 协作声明
-
-本仓库当前版本中，大部分代码实现、文档整理与工程规范工作由 `GPT-5.3-CODEX` 协助完成，并由仓库维护者审核后合并发布。

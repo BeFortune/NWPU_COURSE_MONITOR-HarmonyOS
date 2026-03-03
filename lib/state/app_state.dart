@@ -362,7 +362,10 @@ class AppState extends ChangeNotifier {
     await upsertGrade(entry);
   }
 
-  Future<File> exportJson() async {
+  Future<File> exportJson({bool includeSettings = true}) async {
+    final AppSettings? exportSettings = includeSettings
+        ? _settings.copyWith(termStartMonday: currentTermStartMonday)
+        : null;
     final File file = await _importExportService.exportToJson(
       ImportBundle(
         courses: courses,
@@ -370,6 +373,7 @@ class AppState extends ChangeNotifier {
         semesters: <SemesterInfo>[currentSemester],
         currentSemesterId: _currentSemesterId,
         allSemesters: false,
+        settings: exportSettings,
       ),
     );
     _emitStatus('已导出当前学期 JSON: ${file.path}');
@@ -384,12 +388,16 @@ class AppState extends ChangeNotifier {
     return file;
   }
 
-  Future<File> exportAllSemestersJson() async {
+  Future<File> exportAllSemestersJson({bool includeSettings = true}) async {
+    final AppSettings? exportSettings = includeSettings
+        ? _settings.copyWith(termStartMonday: currentTermStartMonday)
+        : null;
     final File file = await _importExportService.exportAllSemestersToJson(
       semesters: _semesters,
       currentSemesterId: _currentSemesterId,
       courses: _courses,
       grades: _grades,
+      settings: exportSettings,
     );
     _emitStatus('已一键导出全部学期: ${file.path}');
     return file;
@@ -398,6 +406,7 @@ class AppState extends ChangeNotifier {
   Future<({int courses, int grades})> importByFile({
     required String path,
     required bool replaceExisting,
+    bool applySettings = true,
   }) async {
     final ImportBundle bundle = await _importExportService.importFromPath(path);
 
@@ -419,6 +428,13 @@ class AppState extends ChangeNotifier {
       semesterId: _currentSemesterId,
     );
 
+    if (applySettings && bundle.settings != null) {
+      _settings = bundle.settings!.copyWith(
+        termStartMonday: currentTermStartMonday,
+      );
+      await _persistSettings(syncWidget: true, syncNotifications: true);
+    }
+
     _emitStatus('导入完成：${applied.courses} 门课程，${applied.grades} 条成绩');
     return applied;
   }
@@ -426,6 +442,7 @@ class AppState extends ChangeNotifier {
   Future<({int courses, int grades, int semesters})> importAllSemestersByFile({
     required String path,
     required bool replaceExisting,
+    bool applySettings = true,
   }) async {
     final ImportBundle bundle = await _importExportService.importFromPath(path);
     if (!bundle.allSemesters) {
@@ -454,7 +471,13 @@ class AppState extends ChangeNotifier {
     }
 
     _ensureSemesterState(fallbackCurrentId: bundle.currentSemesterId);
-    _settings = _settings.copyWith(termStartMonday: currentTermStartMonday);
+    if (applySettings && bundle.settings != null) {
+      _settings = bundle.settings!.copyWith(
+        termStartMonday: currentTermStartMonday,
+      );
+    } else {
+      _settings = _settings.copyWith(termStartMonday: currentTermStartMonday);
+    }
     await _persistData();
     await _storageService.saveSettings(_settings);
     await _persistSemesterState();

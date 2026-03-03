@@ -483,6 +483,7 @@ class ImportBundle {
     this.semesters = const <SemesterInfo>[],
     this.currentSemesterId,
     this.allSemesters = false,
+    this.settings,
   });
 
   final List<Course> courses;
@@ -490,6 +491,7 @@ class ImportBundle {
   final List<SemesterInfo> semesters;
   final String? currentSemesterId;
   final bool allSemesters;
+  final AppSettings? settings;
 }
 
 class TeachingSystemConfig {
