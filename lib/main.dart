@@ -7,6 +7,7 @@ import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 import 'services/teaching_system_import_service.dart';
 import 'services/widget_sync_service.dart';
+import 'services/windows_desktop_service.dart';
 import 'state/app_state.dart';
 
 Future<void> main() async {
@@ -19,6 +20,7 @@ Future<void> main() async {
     notificationService: NotificationService(),
     widgetSyncService: WidgetSyncService(),
     teachingImportService: TeachingSystemImportService(),
+    windowsDesktopService: WindowsDesktopService(),
   );
   await appState.initialize();
 

@@ -21,6 +21,7 @@ class ImportExportService {
           .toList(),
       'courses': bundle.courses.map((Course e) => e.toJson()).toList(),
       'grades': bundle.grades.map((GradeEntry e) => e.toJson()).toList(),
+      if (bundle.settings != null) 'settings': bundle.settings!.toJson(),
       'exportedAt': DateTime.now().toIso8601String(),
     };
 
@@ -35,6 +36,7 @@ class ImportExportService {
     required String currentSemesterId,
     required List<Course> courses,
     required List<GradeEntry> grades,
+    AppSettings? settings,
   }) async {
     final ImportBundle bundle = ImportBundle(
       courses: courses,
@@ -42,6 +44,7 @@ class ImportExportService {
       semesters: semesters,
       currentSemesterId: currentSemesterId,
       allSemesters: true,
+      settings: settings,
     );
     return exportToJson(bundle);
   }
@@ -163,6 +166,10 @@ class ImportExportService {
       final bool allSemesters = decoded['allSemesters'] == true;
       final String? currentSemesterId =
           (decoded['currentSemesterId'] as String?)?.trim();
+      final dynamic rawSettings = decoded['settings'];
+      final AppSettings? settings = rawSettings is Map<String, dynamic>
+          ? AppSettings.fromJson(rawSettings)
+          : null;
 
       final List<dynamic> rawSemesters =
           (decoded['semesters'] as List<dynamic>?) ?? <dynamic>[];
@@ -192,6 +199,7 @@ class ImportExportService {
         semesters: semesters,
         currentSemesterId: currentSemesterId,
         allSemesters: allSemesters,
+        settings: settings,
       );
     }
 

@@ -2,16 +2,19 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:home_widget/home_widget.dart';
-import 'package:intl/intl.dart';
 
 import '../models/models.dart';
 
 class WidgetSyncService {
   static const String _qualifiedProviderName =
       'com.nwpu.nwpu_course_monitor.CourseTodayWidgetProvider';
+  static const String _iosWidgetKind = 'CourseTodayWidget';
+  static const int _maxCards = 4;
 
   bool get _supported =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   Future<void> sync({
     required List<Course> courses,
@@ -25,53 +28,75 @@ class WidgetSyncService {
     final DateTime today = DateTime(now.year, now.month, now.day);
     final DateTime tomorrow = today.add(const Duration(days: 1));
 
-    final List<Course> todayCourses = _coursesForDate(courses, settings, today);
-    final List<Course> tomorrowCourses = _coursesForDate(
-      courses,
-      settings,
-      tomorrow,
+    final List<_WidgetCourseItem> todayItems = _coursesForDate(
+      courses: courses,
+      settings: settings,
+      day: today,
+      now: now,
+    );
+    final List<_WidgetCourseItem> tomorrowItems = _coursesForDate(
+      courses: courses,
+      settings: settings,
+      day: tomorrow,
+      now: now,
     );
 
-    if (todayCourses.isNotEmpty) {
+    final int weekIndex = max(1, weekOfTerm(today, settings.termStartMonday));
+    final String weekPrefix =
+        '${today.month}.${today.day} '
+        '${_weekdayLabel(today.weekday)}';
+    final String headerLeft = settings.showWeekSummaryInWidget
+        ? '$weekPrefix · 第$weekIndex周'
+        : weekPrefix;
+    await HomeWidget.saveWidgetData<String>('widget_header_left', headerLeft);
+
+    final int remainingCount = todayItems
+        .where((item) => item.status != _WidgetCourseStatus.done)
+        .length;
+    final bool allTodayDone = todayItems.isNotEmpty && remainingCount == 0;
+    final bool showTodayMode = todayItems.isNotEmpty && !allTodayDone;
+
+    if (showTodayMode) {
       await HomeWidget.saveWidgetData<String>('widget_mode', 'today');
       await HomeWidget.saveWidgetData<String>(
-        'widget_title',
-        DateFormat('M月d日 EEEE', 'zh_CN').format(today),
+        'widget_header_right',
+        '还有 $remainingCount 节课',
       );
-      await HomeWidget.saveWidgetData<String>(
-        'widget_today',
-        _buildCourseLines(todayCourses, maxLines: 4, showOverflowSummary: true),
-      );
-      await HomeWidget.saveWidgetData<String>(
-        'widget_footer',
-        tomorrowCourses.isEmpty ? '明日暂无课程' : '明日 ${tomorrowCourses.length} 门课',
-      );
+      await _saveTodayCards(todayItems);
     } else {
-      final List<String> blessings = <String>[
-        '今天没课，记得休息和运动。',
-        '空闲日也别忘了复盘。',
-        '祝你今天高效又轻松。',
-        '没有课程，适合推进计划。',
-        '把今天当作整理节奏的一天。',
-        '去做一件一直想做的小事。',
-        '没有课程，也别忘了补水和走动。',
-        '今天适合把待办清空一半。',
-        '愿你今天心情稳定、学习顺利。',
-        '今天没有课，给自己一点奖励。',
-        '可以慢一点，但别停下来。',
-        '祝你今天事事顺意。',
-        '休整也是进步的一部分。',
-        '今天适合安排一次高质量自习。',
-        '轻松的一天，也能很有收获。',
-      ];
+      await HomeWidget.saveWidgetData<String>('widget_mode', 'empty');
+      await HomeWidget.saveWidgetData<String>(
+        'widget_header_right',
+        allTodayDone ? '今日课程已结束' : '今日无课',
+      );
+      await _saveTodayCards(const <_WidgetCourseItem>[]);
+
+      final List<String> blessings = allTodayDone
+          ? <String>[
+              '今天课程已经全部结束，辛苦了。',
+              '今日课程任务完成，记得休息一下。',
+              '课程都上完了，适合做个简短复盘。',
+              '今天的课已经结束，保持好状态。',
+              '辛苦一天，别忘了补水和活动。',
+              '今日课程全部完成，晚上也要稳步推进。',
+              '今天课堂部分收官，继续保持节奏。',
+            ]
+          : <String>[
+              '今天没有课程，祝你状态在线。',
+              '无课日也别忘了安排运动和休息。',
+              '今天适合推进计划中的重点任务。',
+              '今天没课，适合做一次高质量自习。',
+              '愿你今天专注顺利，事事有回响。',
+              '今天课程清空，给自己一点正反馈。',
+              '没有课程的一天，也能很有收获。',
+            ];
       final int idx = Random(
         now.millisecondsSinceEpoch,
       ).nextInt(blessings.length);
 
-      await HomeWidget.saveWidgetData<String>('widget_mode', 'empty');
       await HomeWidget.saveWidgetData<String>(
         'widget_empty_left_title',
-        '今日无课',
+        allTodayDone ? '今日课程已结束' : '今日无课',
       );
       await HomeWidget.saveWidgetData<String>(
         'widget_empty_left_body',
@@ -83,89 +108,323 @@ class WidgetSyncService {
       );
       await HomeWidget.saveWidgetData<String>(
         'widget_empty_right_body',
-        tomorrowCourses.isEmpty
+        tomorrowItems.isEmpty
             ? '明日也无课'
-            : _buildCourseLines(
-                tomorrowCourses,
+            : _buildTomorrowLines(
+                tomorrowItems,
                 maxLines: 3,
                 showOverflowSummary: true,
               ),
       );
     }
 
-    bool? updated = await HomeWidget.updateWidget(
-      qualifiedAndroidName: _qualifiedProviderName,
-      androidName: 'CourseTodayWidgetProvider',
-    );
-    updated ??= await HomeWidget.updateWidget(
-      androidName: 'CourseTodayWidgetProvider',
-    );
-    updated ??= await HomeWidget.updateWidget(
-      name: 'CourseTodayWidgetProvider',
-    );
+    bool? updated;
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      updated = await HomeWidget.updateWidget(
+        iOSName: _iosWidgetKind,
+        name: _iosWidgetKind,
+      );
+    } else {
+      updated = await HomeWidget.updateWidget(
+        qualifiedAndroidName: _qualifiedProviderName,
+        androidName: 'CourseTodayWidgetProvider',
+      );
+      updated ??= await HomeWidget.updateWidget(
+        androidName: 'CourseTodayWidgetProvider',
+      );
+      updated ??= await HomeWidget.updateWidget(
+        name: 'CourseTodayWidgetProvider',
+      );
+    }
     if (updated != true) {
       throw Exception('组件更新失败，请检查桌面组件是否已添加。');
     }
   }
 
-  List<Course> _coursesForDate(
-    List<Course> courses,
-    AppSettings settings,
-    DateTime date,
-  ) {
-    final List<Course> result = courses
-        .where(
-          (Course course) => course.sessions.any(
-            (CourseSession session) =>
-                session.occursOn(date, settings.termStartMonday),
-          ),
-        )
-        .toList();
+  Future<void> _saveTodayCards(List<_WidgetCourseItem> items) async {
+    final int visibleCount = min(items.length, _maxCards);
 
-    result.sort((Course a, Course b) {
-      final int sa = a.sessions.first.startPeriod;
-      final int sb = b.sessions.first.startPeriod;
-      return sa.compareTo(sb);
+    for (int i = 0; i < _maxCards; i++) {
+      final bool visible = i < visibleCount;
+      await HomeWidget.saveWidgetData<bool>(
+        'widget_card_${i}_visible',
+        visible,
+      );
+      if (!visible) {
+        await HomeWidget.saveWidgetData<String>('widget_card_${i}_title', '');
+        await HomeWidget.saveWidgetData<String>('widget_card_${i}_meta', '');
+        await HomeWidget.saveWidgetData<String>('widget_card_${i}_status', '');
+        await HomeWidget.saveWidgetData<String>('widget_card_${i}_tone', '');
+        continue;
+      }
+
+      final _WidgetCourseItem item = items[i];
+      await HomeWidget.saveWidgetData<String>(
+        'widget_card_${i}_title',
+        _truncate(item.course.name, maxChars: 12),
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'widget_card_${i}_meta',
+        _buildMetaLine(item),
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'widget_card_${i}_status',
+        _statusLabel(item.status),
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'widget_card_${i}_tone',
+        _toneLabel(item.status),
+      );
+    }
+
+    final int overflow = items.length - _maxCards;
+    final bool hasOverflow = overflow > 0;
+    await HomeWidget.saveWidgetData<bool>(
+      'widget_overflow_visible',
+      hasOverflow,
+    );
+    await HomeWidget.saveWidgetData<String>(
+      'widget_overflow_text',
+      hasOverflow ? '等 $overflow 节课' : '',
+    );
+  }
+
+  List<_WidgetCourseItem> _coursesForDate({
+    required List<Course> courses,
+    required AppSettings settings,
+    required DateTime day,
+    required DateTime now,
+  }) {
+    final List<_WidgetCourseItem> result = <_WidgetCourseItem>[];
+    for (final Course course in courses) {
+      for (final CourseSession session in course.sessions) {
+        if (!session.occursOn(day, settings.termStartMonday)) {
+          continue;
+        }
+        final DateTime? startAt = _sessionStartAt(
+          date: day,
+          session: session,
+          settings: settings,
+        );
+        final DateTime? endAt = _sessionEndAt(
+          date: day,
+          session: session,
+          settings: settings,
+        );
+        result.add(
+          _WidgetCourseItem(
+            course: course,
+            session: session,
+            startAt: startAt,
+            endAt: endAt,
+            status: _resolveStatus(now: now, startAt: startAt, endAt: endAt),
+          ),
+        );
+      }
+    }
+
+    result.sort((a, b) {
+      final int byStart = a.session.startPeriod.compareTo(
+        b.session.startPeriod,
+      );
+      if (byStart != 0) {
+        return byStart;
+      }
+      return a.course.name.compareTo(b.course.name);
     });
     return result;
   }
 
-  String _buildCourseLines(
-    List<Course> courses, {
-    int maxLines = 4,
-    bool showOverflowSummary = false,
+  _WidgetCourseStatus _resolveStatus({
+    required DateTime now,
+    required DateTime? startAt,
+    required DateTime? endAt,
   }) {
-    if (courses.isEmpty) {
+    if (startAt == null || endAt == null) {
+      return _WidgetCourseStatus.upcoming;
+    }
+    if (now.isBefore(startAt)) {
+      return _WidgetCourseStatus.upcoming;
+    }
+    if (now.isAtSameMomentAs(endAt) || now.isAfter(endAt)) {
+      return _WidgetCourseStatus.done;
+    }
+    return _WidgetCourseStatus.live;
+  }
+
+  DateTime? _sessionStartAt({
+    required DateTime date,
+    required CourseSession session,
+    required AppSettings settings,
+  }) {
+    final int? startMinutes = _periodStartMinutes(
+      settings: settings,
+      period: session.startPeriod,
+    );
+    if (startMinutes == null) {
+      return null;
+    }
+    return _dateAtMinutes(date, startMinutes);
+  }
+
+  DateTime? _sessionEndAt({
+    required DateTime date,
+    required CourseSession session,
+    required AppSettings settings,
+  }) {
+    final int? nextPeriodMinutes = _periodStartMinutes(
+      settings: settings,
+      period: session.endPeriod + 1,
+    );
+    if (nextPeriodMinutes != null) {
+      return _dateAtMinutes(date, nextPeriodMinutes);
+    }
+
+    final DateTime? startAt = _sessionStartAt(
+      date: date,
+      session: session,
+      settings: settings,
+    );
+    if (startAt == null) {
+      return null;
+    }
+    final int periods = (session.endPeriod - session.startPeriod + 1).clamp(
+      1,
+      24,
+    );
+    return startAt.add(
+      Duration(minutes: periods * settings.periodDurationMinutes),
+    );
+  }
+
+  int? _periodStartMinutes({
+    required AppSettings settings,
+    required int period,
+  }) {
+    if (period <= 0) {
+      return null;
+    }
+    if (period - 1 < settings.periodStartTimes.length) {
+      final int? fromSetting = timeTextToMinutes(
+        settings.periodStartTimes[period - 1],
+      );
+      if (fromSetting != null) {
+        return fromSetting;
+      }
+    }
+    final int? dayStart = timeTextToMinutes(settings.dayStartTime);
+    if (dayStart == null) {
+      return null;
+    }
+    return dayStart + (period - 1) * settings.periodDurationMinutes;
+  }
+
+  DateTime _dateAtMinutes(DateTime date, int minutesOfDay) {
+    final int safeMinutes = minutesOfDay.clamp(0, 24 * 60 - 1);
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      safeMinutes ~/ 60,
+      safeMinutes % 60,
+    );
+  }
+
+  String _buildMetaLine(_WidgetCourseItem item) {
+    final String time = _formatTimeRange(item);
+    final String location = item.course.location.trim().isEmpty
+        ? '地点待定'
+        : _truncate(item.course.location.trim(), maxChars: 12);
+    return '$time  $location';
+  }
+
+  String _formatTimeRange(_WidgetCourseItem item) {
+    if (item.startAt != null && item.endAt != null) {
+      return '${_formatHm(item.startAt!)}-${_formatHm(item.endAt!)}';
+    }
+    return '${item.session.startPeriod}-${item.session.endPeriod}节';
+  }
+
+  String _formatHm(DateTime value) {
+    final String h = value.hour.toString().padLeft(2, '0');
+    final String m = value.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  String _buildTomorrowLines(
+    List<_WidgetCourseItem> items, {
+    required int maxLines,
+    required bool showOverflowSummary,
+  }) {
+    if (items.isEmpty) {
       return '';
     }
-
-    final int safeMaxLines = maxLines < 1 ? 1 : maxLines;
-    final int total = courses.length;
-    final int reservedForSummary = showOverflowSummary && total > safeMaxLines
+    final int safeMaxLines = max(1, maxLines);
+    final int total = items.length;
+    final int reservedSummary = showOverflowSummary && total > safeMaxLines
         ? 1
         : 0;
-    final int lineCount = (safeMaxLines - reservedForSummary).clamp(1, total);
+    final int visibleLines = (safeMaxLines - reservedSummary).clamp(1, total);
 
     final List<String> lines = <String>[];
-    for (int i = 0; i < lineCount; i++) {
-      final Course c = courses[i];
-      final CourseSession s = c.sessions.first;
-      final String shortName = _truncate(c.name, maxChars: 8);
-      lines.add('${s.startPeriod}-${s.endPeriod}节  $shortName');
+    for (int i = 0; i < visibleLines; i++) {
+      final _WidgetCourseItem item = items[i];
+      final String title = _truncate(item.course.name, maxChars: 8);
+      lines.add('${_formatTimeRange(item)}  $title');
     }
 
-    if (reservedForSummary == 1) {
-      lines.add('等${total - lineCount}节课');
+    if (reservedSummary == 1) {
+      lines.add('共$total节课');
     }
-
     return lines.join('\n');
   }
+
+  String _statusLabel(_WidgetCourseStatus status) => switch (status) {
+    _WidgetCourseStatus.done => '已下课',
+    _WidgetCourseStatus.live => '上课中',
+    _WidgetCourseStatus.upcoming => '未上课',
+  };
+
+  String _toneLabel(_WidgetCourseStatus status) => switch (status) {
+    _WidgetCourseStatus.done => 'done',
+    _WidgetCourseStatus.live => 'live',
+    _WidgetCourseStatus.upcoming => 'upcoming',
+  };
+
+  String _weekdayLabel(int weekday) => switch (weekday) {
+    DateTime.monday => '周一',
+    DateTime.tuesday => '周二',
+    DateTime.wednesday => '周三',
+    DateTime.thursday => '周四',
+    DateTime.friday => '周五',
+    DateTime.saturday => '周六',
+    DateTime.sunday => '周日',
+    _ => '未知',
+  };
 
   String _truncate(String text, {required int maxChars}) {
     final String trimmed = text.trim();
     if (trimmed.length <= maxChars) {
       return trimmed;
     }
-    return '${trimmed.substring(0, maxChars)}...';
+    return '${trimmed.substring(0, maxChars)}…';
   }
 }
+
+class _WidgetCourseItem {
+  const _WidgetCourseItem({
+    required this.course,
+    required this.session,
+    required this.startAt,
+    required this.endAt,
+    required this.status,
+  });
+
+  final Course course;
+  final CourseSession session;
+  final DateTime? startAt;
+  final DateTime? endAt;
+  final _WidgetCourseStatus status;
+}
+
+enum _WidgetCourseStatus { done, live, upcoming }

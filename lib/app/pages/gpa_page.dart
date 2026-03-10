@@ -47,10 +47,7 @@ class GpaPage extends StatelessWidget {
                 label: '当前学分绩',
                 value: formatter.format(appState.currentGpa),
               ),
-              MetricTile(
-                label: '加权均分',
-                value: formatter.format(appState.weightedScore),
-              ),
+              MetricTile(label: '已出分课程', value: '${graded.length}'),
               MetricTile(
                 label: '已计入学分',
                 value: formatter.format(appState.earnedCredits),

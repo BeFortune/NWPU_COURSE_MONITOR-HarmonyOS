@@ -12,6 +12,37 @@ import es.antonborri.home_widget.HomeWidgetProvider
 class CourseTodayWidgetProvider : HomeWidgetProvider() {
     companion object {
         private const val TAG = "CourseWidgetProvider"
+
+        private val CARD_CONTAINER_IDS = intArrayOf(
+            R.id.card_1,
+            R.id.card_2,
+            R.id.card_3,
+            R.id.card_4
+        )
+        private val CARD_STRIP_IDS = intArrayOf(
+            R.id.card_1_strip,
+            R.id.card_2_strip,
+            R.id.card_3_strip,
+            R.id.card_4_strip
+        )
+        private val CARD_TITLE_IDS = intArrayOf(
+            R.id.card_1_title,
+            R.id.card_2_title,
+            R.id.card_3_title,
+            R.id.card_4_title
+        )
+        private val CARD_META_IDS = intArrayOf(
+            R.id.card_1_meta,
+            R.id.card_2_meta,
+            R.id.card_3_meta,
+            R.id.card_4_meta
+        )
+        private val CARD_STATUS_IDS = intArrayOf(
+            R.id.card_1_status,
+            R.id.card_2_status,
+            R.id.card_3_status,
+            R.id.card_4_status
+        )
     }
 
     override fun onUpdate(
@@ -26,11 +57,11 @@ class CourseTodayWidgetProvider : HomeWidgetProvider() {
                 val openAppIntent = HomeWidgetLaunchIntent.getActivity(context, MainActivity::class.java)
                 views.setOnClickPendingIntent(R.id.widget_container, openAppIntent)
 
-                val mode = widgetData.getString("widget_mode", "today") ?: "today"
-                if (mode == "empty") {
-                    bindEmptyMode(views, widgetData)
-                } else {
+                val mode = widgetData.getString("widget_mode", "empty") ?: "empty"
+                if (mode == "today") {
                     bindTodayMode(views, widgetData)
+                } else {
+                    bindEmptyMode(views, widgetData)
                 }
             } catch (error: Throwable) {
                 Log.e(TAG, "Widget update failed", error)
@@ -43,26 +74,61 @@ class CourseTodayWidgetProvider : HomeWidgetProvider() {
     private fun bindTodayMode(views: RemoteViews, widgetData: SharedPreferences) {
         views.setViewVisibility(R.id.today_container, View.VISIBLE)
         views.setViewVisibility(R.id.empty_container, View.GONE)
+
         views.setTextViewText(
-            R.id.widget_title,
-            widgetData.getString("widget_title", "今日课程")
+            R.id.widget_header_left,
+            widgetData.getString("widget_header_left", "今日课程")
         )
         views.setTextViewText(
-            R.id.widget_today,
-            widgetData.getString("widget_today", "暂无课程")
+            R.id.widget_header_right,
+            widgetData.getString("widget_header_right", "")
         )
+
+        CARD_CONTAINER_IDS.indices.forEach { index ->
+            val visible = widgetData.getBoolean("widget_card_${index}_visible", false)
+            views.setViewVisibility(CARD_CONTAINER_IDS[index], if (visible) View.VISIBLE else View.GONE)
+            if (!visible) {
+                return@forEach
+            }
+
+            views.setTextViewText(
+                CARD_TITLE_IDS[index],
+                widgetData.getString("widget_card_${index}_title", "")
+            )
+            views.setTextViewText(
+                CARD_META_IDS[index],
+                widgetData.getString("widget_card_${index}_meta", "")
+            )
+            views.setTextViewText(
+                CARD_STATUS_IDS[index],
+                widgetData.getString("widget_card_${index}_status", "")
+            )
+
+            val tone = widgetData.getString("widget_card_${index}_tone", "upcoming") ?: "upcoming"
+            views.setInt(CARD_CONTAINER_IDS[index], "setBackgroundResource", cardBackground(tone))
+            views.setInt(CARD_STRIP_IDS[index], "setBackgroundResource", cardStrip(tone))
+        }
+
+        val overflowVisible = widgetData.getBoolean("widget_overflow_visible", false)
+        views.setViewVisibility(R.id.widget_today_more, if (overflowVisible) View.VISIBLE else View.GONE)
         views.setTextViewText(
-            R.id.widget_footer,
-            widgetData.getString("widget_footer", "点击打开课程管家")
+            R.id.widget_today_more,
+            widgetData.getString("widget_overflow_text", "")
         )
     }
 
     private fun bindEmptyMode(views: RemoteViews, widgetData: SharedPreferences) {
         views.setViewVisibility(R.id.today_container, View.GONE)
         views.setViewVisibility(R.id.empty_container, View.VISIBLE)
+        views.setViewVisibility(R.id.widget_today_more, View.GONE)
+
         views.setTextViewText(
-            R.id.widget_title,
-            widgetData.getString("widget_empty_left_title", "今日无课")
+            R.id.widget_header_left,
+            widgetData.getString("widget_header_left", "今日无课")
+        )
+        views.setTextViewText(
+            R.id.widget_header_right,
+            widgetData.getString("widget_header_right", "")
         )
         views.setTextViewText(
             R.id.empty_left_title,
@@ -85,8 +151,33 @@ class CourseTodayWidgetProvider : HomeWidgetProvider() {
     private fun bindErrorMode(views: RemoteViews) {
         views.setViewVisibility(R.id.today_container, View.VISIBLE)
         views.setViewVisibility(R.id.empty_container, View.GONE)
-        views.setTextViewText(R.id.widget_title, "课程管家")
-        views.setTextViewText(R.id.widget_today, "组件更新失败，请打开 App 后点击“立即同步组件”")
-        views.setTextViewText(R.id.widget_footer, "点击打开课程管家")
+        views.setViewVisibility(R.id.widget_today_more, View.GONE)
+        views.setTextViewText(R.id.widget_header_left, "课程管家")
+        views.setTextViewText(R.id.widget_header_right, "同步失败")
+        views.setTextViewText(R.id.card_1_title, "组件更新失败")
+        views.setTextViewText(R.id.card_1_meta, "请打开 App 后点击“立即同步组件”")
+        views.setTextViewText(R.id.card_1_status, "")
+        views.setViewVisibility(R.id.card_1, View.VISIBLE)
+        views.setViewVisibility(R.id.card_2, View.GONE)
+        views.setViewVisibility(R.id.card_3, View.GONE)
+        views.setViewVisibility(R.id.card_4, View.GONE)
+        views.setInt(R.id.card_1, "setBackgroundResource", R.drawable.widget_card_bg_done)
+        views.setInt(R.id.card_1_strip, "setBackgroundResource", R.drawable.widget_card_strip_done)
+    }
+
+    private fun cardBackground(tone: String): Int {
+        return when (tone) {
+            "done" -> R.drawable.widget_card_bg_done
+            "live" -> R.drawable.widget_card_bg_live
+            else -> R.drawable.widget_card_bg_upcoming
+        }
+    }
+
+    private fun cardStrip(tone: String): Int {
+        return when (tone) {
+            "done" -> R.drawable.widget_card_strip_done
+            "live" -> R.drawable.widget_card_strip_live
+            else -> R.drawable.widget_card_strip_upcoming
+        }
     }
 }

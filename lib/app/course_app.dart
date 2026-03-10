@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
@@ -7,6 +7,7 @@ import 'pages/gpa_page.dart';
 import 'pages/import_page.dart';
 import 'pages/schedule_page.dart';
 import 'pages/settings_page.dart';
+import 'pages/windows_mini_schedule_page.dart';
 
 class CourseMonitorApp extends StatelessWidget {
   const CourseMonitorApp({super.key, required this.appState});
@@ -20,14 +21,22 @@ class CourseMonitorApp extends StatelessWidget {
       builder: (BuildContext context, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: '课程管家',
+          title: '\u8bfe\u8868\u7ba1\u5bb6',
           theme: _buildTheme(Brightness.light),
           darkTheme: _buildTheme(Brightness.dark),
           themeMode: appState.settings.themeModeSetting.toThemeMode(),
-          home: appState.initialized
-              ? CourseHomeShell(appState: appState)
-              : const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
+          home: !appState.initialized
+              ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+              : (!kIsWeb &&
+                    defaultTargetPlatform == TargetPlatform.windows &&
+                    appState.windowsMiniMode)
+              ? _WindowsMiniRoot(
+                  key: const ValueKey<String>('windows-mini'),
+                  appState: appState,
+                )
+              : CourseHomeShell(
+                  key: const ValueKey<String>('course-home'),
+                  appState: appState,
                 ),
         );
       },
@@ -182,7 +191,15 @@ class _CourseHomeShellState extends State<CourseHomeShell> {
   }
 
   void _onDestinationSelected(int value) {
-    if (value == _index) {
+    int currentPage = _index;
+    if (_pageController.hasClients) {
+      currentPage = (_pageController.page ?? _index.toDouble()).round();
+    }
+    if (value == _index && value == currentPage) {
+      return;
+    }
+    setState(() => _index = value);
+    if (!_pageController.hasClients) {
       return;
     }
     _pageController.animateToPage(
@@ -243,6 +260,37 @@ class _CourseHomeShellState extends State<CourseHomeShell> {
               index: _index,
               onDestinationSelected: _onDestinationSelected,
             ),
+    );
+  }
+}
+
+class _WindowsMiniRoot extends StatelessWidget {
+  const _WindowsMiniRoot({super.key, required this.appState});
+
+  final AppState appState;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: WindowsMiniSchedulePage(
+              appState: appState,
+              onExitMiniMode: () =>
+                  appState.runWithBusy(appState.launchWindowsMainWindow),
+            ),
+          ),
+          if (appState.busy)
+            const Positioned.fill(
+              child: ColoredBox(
+                color: Color(0x33000000),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -317,21 +365,21 @@ const List<NavigationDestination> _destinations = <NavigationDestination>[
   NavigationDestination(
     icon: Icon(Icons.calendar_month_outlined),
     selectedIcon: Icon(Icons.calendar_month),
-    label: '课表',
+    label: '\u8bfe\u8868',
   ),
   NavigationDestination(
     icon: Icon(Icons.file_upload_outlined),
     selectedIcon: Icon(Icons.file_upload),
-    label: '导入',
+    label: '\u5bfc\u5165',
   ),
   NavigationDestination(
     icon: Icon(Icons.calculate_outlined),
     selectedIcon: Icon(Icons.calculate),
-    label: '绩点',
+    label: '\u7ee9\u70b9',
   ),
   NavigationDestination(
     icon: Icon(Icons.tune_outlined),
     selectedIcon: Icon(Icons.tune),
-    label: '设置',
+    label: '\u8bbe\u7f6e',
   ),
 ];

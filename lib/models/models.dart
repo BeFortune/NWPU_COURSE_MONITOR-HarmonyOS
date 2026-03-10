@@ -309,6 +309,8 @@ class AppSettings {
     required this.maxPeriodsPerDay,
     required this.frostedCards,
     required this.showWeekSummaryInWidget,
+    required this.windowsDesktopPinned,
+    required this.windowsAutoStart,
   });
 
   final ThemeModeSetting themeModeSetting;
@@ -321,6 +323,8 @@ class AppSettings {
   final int maxPeriodsPerDay;
   final bool frostedCards;
   final bool showWeekSummaryInWidget;
+  final bool windowsDesktopPinned;
+  final bool windowsAutoStart;
 
   static AppSettings defaults() {
     const String startTime = '08:00';
@@ -342,6 +346,8 @@ class AppSettings {
       maxPeriodsPerDay: maxPeriods,
       frostedCards: true,
       showWeekSummaryInWidget: true,
+      windowsDesktopPinned: false,
+      windowsAutoStart: false,
     );
   }
 
@@ -356,6 +362,8 @@ class AppSettings {
     int? maxPeriodsPerDay,
     bool? frostedCards,
     bool? showWeekSummaryInWidget,
+    bool? windowsDesktopPinned,
+    bool? windowsAutoStart,
   }) {
     return AppSettings(
       themeModeSetting: themeModeSetting ?? this.themeModeSetting,
@@ -371,6 +379,8 @@ class AppSettings {
       frostedCards: frostedCards ?? this.frostedCards,
       showWeekSummaryInWidget:
           showWeekSummaryInWidget ?? this.showWeekSummaryInWidget,
+      windowsDesktopPinned: windowsDesktopPinned ?? this.windowsDesktopPinned,
+      windowsAutoStart: windowsAutoStart ?? this.windowsAutoStart,
     );
   }
 
@@ -385,6 +395,8 @@ class AppSettings {
     'maxPeriodsPerDay': maxPeriodsPerDay,
     'frostedCards': frostedCards,
     'showWeekSummaryInWidget': showWeekSummaryInWidget,
+    'windowsDesktopPinned': windowsDesktopPinned,
+    'windowsAutoStart': windowsAutoStart,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -435,6 +447,8 @@ class AppSettings {
       maxPeriodsPerDay: parsedMaxPeriods.clamp(1, 24),
       frostedCards: json['frostedCards'] as bool? ?? true,
       showWeekSummaryInWidget: json['showWeekSummaryInWidget'] as bool? ?? true,
+      windowsDesktopPinned: json['windowsDesktopPinned'] as bool? ?? false,
+      windowsAutoStart: json['windowsAutoStart'] as bool? ?? false,
     );
   }
 }
@@ -483,6 +497,7 @@ class ImportBundle {
     this.semesters = const <SemesterInfo>[],
     this.currentSemesterId,
     this.allSemesters = false,
+    this.settings,
   });
 
   final List<Course> courses;
@@ -490,6 +505,7 @@ class ImportBundle {
   final List<SemesterInfo> semesters;
   final String? currentSemesterId;
   final bool allSemesters;
+  final AppSettings? settings;
 }
 
 class TeachingSystemConfig {
