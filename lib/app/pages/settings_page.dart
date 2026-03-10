@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -309,6 +310,25 @@ class _SettingsPageState extends State<SettingsPage> {
               onChanged: (bool value) async =>
                   appState.setWidgetWeekSummary(value),
             ),
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows)
+              FilledButton.tonalIcon(
+                onPressed: appState.windowsMiniMode
+                    ? null
+                    : () async => appState.runWithBusy(
+                        appState.launchWindowsMiniWindow,
+                      ),
+                icon: const Icon(Icons.picture_in_picture_alt_outlined),
+                label: const Text('切换到小窗模式'),
+              ),
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('开机自启动'),
+                subtitle: const Text('Windows 登录后自动启动'),
+                value: appState.settings.windowsAutoStart,
+                onChanged: (bool value) async =>
+                    appState.setWindowsAutoStart(value),
+              ),
             const SizedBox(height: 8),
             FilledButton.tonalIcon(
               onPressed: () async =>

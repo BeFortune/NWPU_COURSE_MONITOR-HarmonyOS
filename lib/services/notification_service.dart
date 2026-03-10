@@ -25,9 +25,16 @@ class NotificationService {
     const AndroidInitializationSettings androidInit =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const DarwinInitializationSettings iosInit = DarwinInitializationSettings();
+    const WindowsInitializationSettings windowsInit =
+        WindowsInitializationSettings(
+          appName: 'NWPU Course Monitor',
+          appUserModelId: 'HClO3.NWPU.CourseMonitor.1',
+          guid: '0de31c39-bf09-4d76-8ed3-5fcbf4b26f71',
+        );
     const InitializationSettings settings = InitializationSettings(
       android: androidInit,
       iOS: iosInit,
+      windows: windowsInit,
     );
     await _plugin.initialize(settings: settings);
     await _requestPermission();
@@ -142,6 +149,7 @@ class NotificationService {
                 priority: Priority.high,
               ),
               iOS: DarwinNotificationDetails(),
+              windows: WindowsNotificationDetails(),
             ),
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           );

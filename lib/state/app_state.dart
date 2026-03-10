@@ -9,6 +9,7 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/teaching_system_import_service.dart';
 import '../services/widget_sync_service.dart';
+import '../services/windows_desktop_service.dart';
 
 class AppState extends ChangeNotifier {
   AppState({
@@ -17,17 +18,20 @@ class AppState extends ChangeNotifier {
     required NotificationService notificationService,
     required WidgetSyncService widgetSyncService,
     required TeachingSystemImportService teachingImportService,
+    required WindowsDesktopService windowsDesktopService,
   }) : _storageService = storageService,
        _importExportService = importExportService,
        _notificationService = notificationService,
        _widgetSyncService = widgetSyncService,
-       _teachingImportService = teachingImportService;
+       _teachingImportService = teachingImportService,
+       _windowsDesktopService = windowsDesktopService;
 
   final StorageService _storageService;
   final ImportExportService _importExportService;
   final NotificationService _notificationService;
   final WidgetSyncService _widgetSyncService;
   final TeachingSystemImportService _teachingImportService;
+  final WindowsDesktopService _windowsDesktopService;
 
   List<Course> _courses = <Course>[];
   List<GradeEntry> _grades = <GradeEntry>[];
@@ -38,10 +42,12 @@ class AppState extends ChangeNotifier {
   bool _initialized = false;
   int _busyCount = 0;
   String? _statusMessage;
+  bool _windowsMiniMode = false;
 
   bool get initialized => _initialized;
   bool get busy => _busyCount > 0;
   String? get statusMessage => _statusMessage;
+  bool get windowsMiniMode => _windowsMiniMode;
 
   AppSettings get settings => _settings;
 
@@ -141,6 +147,7 @@ class AppState extends ChangeNotifier {
 
       await _notificationService.initialize();
       await _resyncIntegrations();
+      await _syncWindowsDesktopSettings();
       await _storageService.saveSettings(_settings);
       await _persistSemesterState();
     } catch (error) {
@@ -716,6 +723,124 @@ class AppState extends ChangeNotifier {
     _emitStatus('组件显示设置已更新');
   }
 
+  Future<void> setWindowsDesktopPinned(bool enabled) async {
+    bool effective = enabled;
+    if (Platform.isWindows) {
+      final bool applied = await _windowsDesktopService.setMiniWindowMode(
+        enabled,
+      );
+      final bool actual = await _windowsDesktopService.getMiniWindowMode();
+      effective = actual;
+      if (!applied && actual != enabled) {
+        _emitStatus('小窗模式切换失败');
+        return;
+      }
+    }
+
+    _settings = _settings.copyWith(windowsDesktopPinned: effective);
+    await _storageService.saveSettings(_settings);
+    notifyListeners();
+    _emitStatus(effective ? '小窗模式已开启' : '小窗模式已关闭');
+  }
+
+  Future<void> setWindowsAutoStart(bool enabled) async {
+    final bool applied = await _windowsDesktopService.setAutoStart(enabled);
+    if (Platform.isWindows && !applied) {
+      _emitStatus('开机自启动设置失败');
+      return;
+    }
+    _settings = _settings.copyWith(windowsAutoStart: enabled);
+    await _storageService.saveSettings(_settings);
+    notifyListeners();
+    _emitStatus(enabled ? '开机自启动已开启' : '开机自启动已关闭');
+  }
+
+  Future<void> startWindowsMiniDrag() async {
+    await _windowsDesktopService.startWindowDrag();
+  }
+
+  Future<void> syncWindowsMiniTheme(bool dark) async {
+    if (!Platform.isWindows || !_windowsMiniMode) {
+      return;
+    }
+    await _windowsDesktopService.setMiniWindowDark(dark);
+  }
+
+  Future<void> enterWindowsMiniMode() async {
+    if (_windowsMiniMode) {
+      return;
+    }
+
+    _windowsMiniMode = true;
+    notifyListeners();
+
+    if (Platform.isWindows) {
+      final bool applied = await _windowsDesktopService.setMiniWindowMode(true);
+      final bool actual = await _windowsDesktopService.getMiniWindowMode();
+      if (!applied && !actual) {
+        _windowsMiniMode = false;
+        notifyListeners();
+        _emitStatus('Windows mini mode switch failed');
+        return;
+      }
+      _windowsMiniMode = actual;
+    }
+
+    _settings = _settings.copyWith(windowsDesktopPinned: _windowsMiniMode);
+    await _storageService.saveSettings(_settings);
+    notifyListeners();
+    _emitStatus(
+      _windowsMiniMode
+          ? 'Windows mini mode enabled'
+          : 'Windows mini mode disabled',
+    );
+  }
+
+  Future<void> exitWindowsMiniMode() async {
+    bool effective = false;
+    if (Platform.isWindows) {
+      final bool applied = await _windowsDesktopService.setMiniWindowMode(
+        false,
+      );
+      final bool actual = await _windowsDesktopService.getMiniWindowMode();
+      if (!applied && actual) {
+        _emitStatus('Windows mini mode switch failed');
+        return;
+      }
+      effective = actual;
+    }
+
+    _windowsMiniMode = effective;
+    _settings = _settings.copyWith(windowsDesktopPinned: effective);
+    await _storageService.saveSettings(_settings);
+    notifyListeners();
+    _emitStatus('Windows mini mode disabled');
+  }
+
+  Future<void> launchWindowsMiniWindow() async {
+    if (!Platform.isWindows || _windowsMiniMode) {
+      return;
+    }
+
+    final bool launched = await _windowsDesktopService
+        .launchMiniWindowProcess();
+    if (!launched) {
+      _emitStatus('Windows mini mode switch failed');
+    }
+  }
+
+  Future<void> launchWindowsMainWindow() async {
+    if (!Platform.isWindows) {
+      return;
+    }
+
+    final bool launched = await _windowsDesktopService
+        .launchMainWindowProcess();
+    if (!launched) {
+      _emitStatus('Windows mini mode switch failed');
+    }
+  }
+
   Future<void> syncWidgetNow() async {
     await _syncWidget(ignoreErrors: false);
     _emitStatus('组件已同步');
@@ -1039,6 +1164,29 @@ class AppState extends ChangeNotifier {
       if (!ignoreErrors) {
         rethrow;
       }
+    }
+  }
+
+  Future<void> _syncWindowsDesktopSettings() async {
+    if (!Platform.isWindows) {
+      _windowsMiniMode = false;
+      return;
+    }
+
+    _windowsMiniMode = await _windowsDesktopService.getMiniWindowMode();
+    await _windowsDesktopService.setAutoStart(_settings.windowsAutoStart);
+    final bool autoStart = await _windowsDesktopService.getAutoStart();
+
+    final bool settingsChanged =
+        _settings.windowsDesktopPinned ||
+        autoStart != _settings.windowsAutoStart;
+    if (settingsChanged) {
+      _settings = _settings.copyWith(
+        windowsDesktopPinned: false,
+        windowsAutoStart: autoStart,
+      );
+      await _storageService.saveSettings(_settings);
+      notifyListeners();
     }
   }
 

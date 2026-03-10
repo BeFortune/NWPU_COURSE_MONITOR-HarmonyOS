@@ -109,12 +109,14 @@
                             android:id="@+id/card_1_status"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
+                            android:layout_marginTop="0dp"
                             android:ellipsize="end"
+                            android:includeFontPadding="false"
                             android:maxLines="1"
+                            android:singleLine="true"
                             android:text="未上课"
                             android:textColor="#566171"
-                            android:textSize="11sp" />
+                            android:textSize="10sp" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -169,12 +171,14 @@
                             android:id="@+id/card_2_status"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
+                            android:layout_marginTop="0dp"
                             android:ellipsize="end"
+                            android:includeFontPadding="false"
                             android:maxLines="1"
+                            android:singleLine="true"
                             android:text="未上课"
                             android:textColor="#566171"
-                            android:textSize="11sp" />
+                            android:textSize="10sp" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
@@ -237,12 +241,14 @@
                             android:id="@+id/card_3_status"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
+                            android:layout_marginTop="0dp"
                             android:ellipsize="end"
+                            android:includeFontPadding="false"
                             android:maxLines="1"
+                            android:singleLine="true"
                             android:text="未上课"
                             android:textColor="#566171"
-                            android:textSize="11sp" />
+                            android:textSize="10sp" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -297,12 +303,14 @@
                             android:id="@+id/card_4_status"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
+                            android:layout_marginTop="0dp"
                             android:ellipsize="end"
+                            android:includeFontPadding="false"
                             android:maxLines="1"
+                            android:singleLine="true"
                             android:text="未上课"
                             android:textColor="#566171"
-                            android:textSize="11sp" />
+                            android:textSize="10sp" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
