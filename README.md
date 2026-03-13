@@ -17,6 +17,37 @@
 - 浅色/深色模式 + 鸿蒙风格适配
 - 多学期独立管理 + JSON 导入导出
 
+## 🔔 HarmonyOS 本地通知
+
+- ArkTS 侧 `MethodChannel` 处理逻辑：`ohos/entry/src/main/ets/ability/NotificationAbility.ets` 新增插件会在 `nwpu/course_monitor/notification` 通道上注册 `showNotification`，自动处理通知权限、振动与系统铃声，并在调用成功后通过 `notificationManager.publish` 发布通知。
+- Flutter 侧调用示例（仅在 HarmonyOS NEXT / OpenHarmony API 16 生效）：
+
+```dart
+import 'dart:io' show Platform;
+import 'package:flutter/services.dart';
+
+class OhosNotificationBridge {
+  static const MethodChannel _channel = MethodChannel('nwpu/course_monitor/notification');
+
+  static Future<void> showNotification({
+    required String title,
+    required String body,
+    String channelId = 'course-reminder',
+  }) async {
+    if (!Platform.isOhos) {
+      return;
+    }
+    await _channel.invokeMethod('showNotification', {
+      'title': title,
+      'body': body,
+      'channelId': channelId,
+    });
+  }
+}
+```
+
+在 Flutter 任意位置调用 `OhosNotificationBridge.showNotification(...)` 即可触发鸿蒙原生通知，其他平台会被自动忽略。
+
 ## 📱 平台支持（更新）
 - **HarmonyOS NEXT**：完整功能（推荐使用 DevEco Studio）
 - Android：完整功能（原生）
