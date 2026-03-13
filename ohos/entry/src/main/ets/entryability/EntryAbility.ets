@@ -2,6 +2,7 @@ import { FlutterAbility, FlutterEngine } from '@ohos/flutter_ohos';
 import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant';
 import { window } from '@kit.ArkUI';
 import MyNotificationPlugin from '../MyNotificationPlugin';
+import CourseWidgetPlugin from '../widget/common/CourseWidgetPlugin';
 
 /**
  * EntryAbility
@@ -23,5 +24,8 @@ export default class EntryAbility extends FlutterAbility {
 
     // 2) Register custom OHOS notification MethodChannel plugin.
     this.addPlugin(new MyNotificationPlugin());
+
+    // 3) Register widget synchronization MethodChannel plugin.
+    this.addPlugin(new CourseWidgetPlugin());
   }
 }

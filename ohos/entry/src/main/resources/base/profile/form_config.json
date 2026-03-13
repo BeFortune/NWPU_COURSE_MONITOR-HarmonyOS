@@ -1,0 +1,19 @@
+{
+  "forms": [
+    {
+      "name": "CourseTodayWidget",
+      "description": "NWPU 今日课程卡片",
+      "src": "./ets/widget/pages/WidgetCard.ets",
+      "uiSyntax": "arkts",
+      "type": "JS",
+      "colorMode": "auto",
+      "isDefault": true,
+      "updateEnabled": true,
+      "scheduledUpdateTime": "07:00",
+      "defaultDimension": "2*4",
+      "supportDimensions": [
+        "2*4"
+      ]
+    }
+  ]
+}

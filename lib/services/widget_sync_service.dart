@@ -1,15 +1,21 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 
 import '../models/models.dart';
+
+const bool kIsOHOSWidget = bool.fromEnvironment('dart.library.ohos');
 
 class WidgetSyncService {
   static const String _qualifiedProviderName =
       'com.nwpu.nwpu_course_monitor.CourseTodayWidgetProvider';
   static const String _iosWidgetKind = 'CourseTodayWidget';
   static const int _maxCards = 4;
+  static const MethodChannel _widgetChannel = MethodChannel(
+    'com.befortune.nwpu/course_widget',
+  );
 
   bool get _supported =>
       !kIsWeb &&
@@ -21,6 +27,11 @@ class WidgetSyncService {
     required AppSettings settings,
     required DateTime now,
   }) async {
+    if (kIsOHOSWidget) {
+      await updateWidget(courses: courses, settings: settings, now: now);
+      return;
+    }
+
     if (!_supported) {
       return;
     }
@@ -138,6 +149,54 @@ class WidgetSyncService {
     }
     if (updated != true) {
       throw Exception('组件更新失败，请检查桌面组件是否已添加。');
+    }
+  }
+
+  Future<void> updateWidget({
+    required List<Course> courses,
+    required AppSettings settings,
+    required DateTime now,
+  }) async {
+    if (!kIsOHOSWidget) {
+      return;
+    }
+
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final List<_WidgetCourseItem> todayItems = _coursesForDate(
+      courses: courses,
+      settings: settings,
+      day: today,
+      now: now,
+    );
+
+    final int weekIndex = max(1, weekOfTerm(today, settings.termStartMonday));
+    final String dateText = settings.showWeekSummaryInWidget
+        ? '${today.month}.${today.day} ${_weekdayLabel(today.weekday)} · 第$weekIndex周'
+        : '${today.month}.${today.day} ${_weekdayLabel(today.weekday)}';
+
+    final List<Map<String, String>> widgetCourses = todayItems
+        .map(
+          (item) => <String, String>{
+            'courseName': _truncate(item.course.name, maxChars: 18),
+            'timeRange': _formatTimeRange(item),
+            'location': item.course.location.trim().isEmpty
+                ? '地点待定'
+                : _truncate(item.course.location.trim(), maxChars: 16),
+            'status': item.status == _WidgetCourseStatus.done
+                ? 'finished'
+                : 'upcoming',
+          },
+        )
+        .toList();
+
+    try {
+      await _widgetChannel.invokeMethod<void>('updateWidget', <String, dynamic>{
+        'dateText': dateText,
+        'generatedAt': _formatHm(now),
+        'courses': widgetCourses,
+      });
+    } on PlatformException catch (e) {
+      throw Exception('鸿蒙卡片更新失败: ${e.code} ${e.message}');
     }
   }
 
