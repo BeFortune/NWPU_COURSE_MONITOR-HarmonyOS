@@ -1,94 +1,45 @@
-# NWPU Course Monitor
+# NWPU Course Monitor - HarmonyOS NEXT 版
 
-基于 Flutter 的多端课表与成绩管理应用，支持一次开发，多端运行（Android / iOS / Windows / Web）。
+**原项目移植版** | 基于 Flutter OHOS 的西北工业大学课程监控助手
 
-## 功能与特性
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- 课表管理
-  - 日列表、周列表、周视图三种模式
-  - 课程详情折叠展示，支持手动增删改
-- 教务导入
-  - 支持移动端内置浏览器进入教务系统后一键提取课程
-  - 兼容 NWPU 场景的课程解析逻辑
-- 成绩与 GPA
-  - 课程可绑定成绩/绩点
-  - 自动计算当前学期 GPA、加权均分、已修学分
-- 导入导出
-  - 当前学期：`JSON / CSV`
-  - 全部学期：`JSON`
-  - `JSON` 可包含作息与提醒设置，便于跨设备迁移
-- 提醒能力
-  - 基于每节课时间进行上课前通知
-  - 提醒提前时间可配置
-- 桌面小组件（Android）
-  - 4x2 组件展示今日课程
-  - 按时间状态区分：未上课 / 上课中 / 已下课
-  - 今日课程结束或无课时，自动切换为“今日无课 + 明日课程”
-- 主题与界面
-  - 浅色 / 深色模式
-  - 轻量磨砂风格与移动端/桌面端适配
-- 学期管理
-  - 新建、切换、编辑学期
-  - 按学期独立管理课表与成绩
+---
 
-## 平台支持
+本仓库是 [原 NWPU_COURSE_MONITOR](https://github.com/fantian-bilibili/NWPU_COURSE_MONITOR) 的 **HarmonyOS NEXT (Flutter OHOS)** 移植版本，专为 NWPU 学生打造，支持在 HarmonyOS 设备上运行课表、成绩、提醒等核心功能。
 
-- Android：完整功能（含课程提醒、小组件）
-- iOS：核心功能可用（提醒可用；小组件需额外 WidgetKit 扩展配置）
-- Windows：核心功能可用
-- Web：核心页面可运行（系统级提醒/小组件能力受平台限制）
+## ✨ 功能与特性（已适配 HarmonyOS）
+- 课表管理（日/周列表、周视图）
+- 教务一键导入 + NWPU 专属解析
+- 成绩 & GPA 自动计算
+- 课程提醒（ArkTS NotificationAbility + MethodChannel）
+- HarmonyOS Form 卡片（替代 Android 小组件）
+- 浅色/深色模式 + 鸿蒙风格适配
+- 多学期独立管理 + JSON 导入导出
 
-## 快速开始
-release 版本已上传至 GitHub Releases
-如果你想要对项目进行本地编译，则需要满足以下环境要求，并按照步骤进行安装、检查和运行。
+## 📱 平台支持（更新）
+- **HarmonyOS NEXT**：完整功能（推荐使用 DevEco Studio）
+- Android：完整功能（原生）
+- iOS / Windows / Web：核心功能可用
+
+## 🚀 快速开始（HarmonyOS 专属）
+
 ### 环境要求
+- DevEco Studio（最新版）
+- HarmonyOS SDK（NEXT）
+- Flutter 3.41.x + OHOS 插件
 
-- Flutter 3.41.x
-- Dart 3.11.x
-- JDK 17
-
-### 安装与检查
-
+### 在 DevEco Studio 中运行
 ```bash
+# 1. Clone 本仓库
+git clone https://github.com/BeFortune/NWPU_COURSE_MONITOR-HarmonyOS.git
+
+# 2. 生成 OHOS 项目结构
+cd NWPU_COURSE_MONITOR-HarmonyOS
+flutter create --platforms ohos .
+
+# 3. 安装依赖（已包含 OHOS override）
 flutter pub get
-flutter analyze
-flutter test
-```
 
-### 运行
-
-```bash
-flutter run -d android
-flutter run -d windows
-```
-
-### 构建 APK
-
-```bash
-flutter build apk --release
-```
-
-网络环境受限时可使用：
-
-```bash
-cmd /c "set FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn&& flutter build apk --release"
-```
-
-## 项目结构
-
-```text
-NWPU_COURSE_MONITOR/
-├── android/ ios/ web/ windows/
-├── lib/
-│   ├── app/        # 页面与 UI
-│   ├── models/     # 数据模型
-│   ├── services/   # 导入、存储、提醒、组件同步
-│   └── state/      # 应用状态管理
-├── test/
-└── docs/
-```
-
-## 许可证
-
-MIT License
-
+# 4. 运行到 HarmonyOS 设备/模拟器
+flutter run -d ohos
